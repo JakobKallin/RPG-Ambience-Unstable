@@ -53,7 +53,7 @@ AmbienceStage.Sound = function(container, stopSceneIfSoundOnly, includeInFade, r
 	function onTimeUpdate() {
 		// This event seems to sometimes fire after the scene has been removed, so we need to check for a scene to avoid null pointers.
 		if ( scene ) {
-			var duration = this.actualDuration || this.duration;
+			var duration = this.duration || Infinity;
 			var timeLeft = duration - this.currentTime;
 			if ( timeLeft <= scene.sound.overlap ) {
 				this.removeEventListener('timeupdate', onTimeUpdate);
@@ -85,25 +85,8 @@ AmbienceStage.Track = function(path, container, maxVolume, includeInFade, remove
 	
 	var hasStopped = false;
 	
-	// If we play before the duration is known, crossover may occur immediately.
-	function playWhenDurationKnown(callbacks) {
-		container.appendChild(node);
-		
-		if ( node.readyState === 0 ) {
-			node.addEventListener('loadedmetadata', function() {
-				// Because this is asynchronous, check to make sure that the sound has not been stopped already.
-				// Otherwise, several sounds might be playing at once if started between this function call and the loadedmetadata event.
-				if ( !hasStopped ) {
-					play(callbacks);
-				}
-			});
-		} else {
-			play(callbacks);
-		}
-	}
-	
 	function play(callbacks) {
-		loadActualDuration(node);
+		container.appendChild(node);
 		
 		if ( callbacks.onEnded instanceof Array ) {			
 			callbacks.onEnded.forEach(function(callback) {
@@ -132,19 +115,8 @@ AmbienceStage.Track = function(path, container, maxVolume, includeInFade, remove
 		}
 	}
 	
-	// In Firefox, duration is not properly loaded from object URLs.
-	// By setting currentTime too high, currentTime becomes the actual duration.
-	// Since the duration property is immutable, we create a custom property with the actual duration.
-	function loadActualDuration(node) {
-		if ( isNaN(node.duration) || node.duration === Infinity ) {
-			node.currentTime = 10000;
-			node.actualDuration = node.currentTime;
-			node.currentTime = 0;
-		}
-	}
-	
 	return {
-		play: playWhenDurationKnown,
+		play: play,
 		stop: stop
 	};
 };
